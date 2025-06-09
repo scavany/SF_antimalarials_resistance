@@ -1,4 +1,4 @@
-################# MEDICINE QUALITY MODELLING ############################
+################ MEDICINE QUALITY MODELLING ############################
 ## A model for malaria treatment with varying DOSE of medicine quality ##
 #########################################################################
 
@@ -159,9 +159,9 @@ MedQual<-function(t, X, parameters) {
     I <- T1+T2+T3+Tp+Tr+IC1+IA1+IU1
     beta <- R0*(muo+nu)*seas                                      
     lam <- beta*seas*(IC1+kA*(IA1+T1+T2+T3+Tp)+kU*(IU1+Tr))/N   # force of infection 
-    nuD <- nuDmin / (dose / parameters$Ds + 0.001 / 365)                            # clearance rate on treatment day 4+ #### THIS DOESN't MAKE SENSE!
+    nuD <- nuDmin / (dose / parameters$Ds + 0.01 / 365)                # clearance rate on treatment day 4+ 
     # print(nuD)
-    nup <- (dose/parameters$Ds)*nupmax                                          # clearance rate on treatment day 4+ (partner-drug)
+    nup <- (dose/parameters$Ds)*nupmax            # clearance rate on treatment day 4+ (partner-drug) - SHOULDN'T THIS TAKE A SIMILAR FORM to nuD?
     # print(nup)
     theta <- 1/(1+(3/365)*nuC)                                    # ?
     treat <- (t>=t_treat)*365/(wait_treat)                      # rate of starting treatment, once passed t_treat
@@ -212,8 +212,8 @@ MedQual<-function(t, X, parameters) {
     ## lp0<-  2                   # initial log10 parasite load in whole body
     
     ## ## here we assume that degree of resistance to artemisin is gammaa then
-    gammaa<-1           # degree of resitance to artmeisin (currently at about 0.3)
-    gammap<-1                 # degree of resistance to parter drug
+    gammaa <- 0.75           # degree of resitance to artmeisin (currently at about 0.3)
+    gammap <- 0.75           # degree of resistance to parter drug
     ## mlamax<-3                  # sensitive rate of reduction of parasites in the body by artemisinin
     ## mlpmax<-1                  # sensitive rate of reduction of parasites in the body by the partner
     
@@ -295,23 +295,23 @@ MedQual<-function(t, X, parameters) {
     dT1 <- treat*IC1 -nu1*T1 -(nuD[1]/(365+nuD[1]))*kRes2Sens*T1 -(365/(365+nuD[1]))*kSens2Res*T1 -muo*T1 +jSens2Res1
     dT2 <- (1-c1)*nu1*T1 -nu2*T2 -(2*nuD[1]/(365+2*nuD[1]))*kRes2Sens*T2 -(365/(365+2*nuD[1]))*kSens2Res*T2 -muo*T2 +jSens2Res2
     dT3 <- (1-c2)*nu2*T2 -nu3*T3 -(3*nuD[1]/(365+3*nuD[1]))*kRes2Sens*T3 -(365/(365+3*nuD[1]))*kSens2Res*T3 -muo*T3 +jSens2Res3
-    dTp <- (1-theta)*(1-c3)*nu3*T3 -(nuD+nup)*Tp -fw*Tp -kSens2Res*Tp -muo*Tp +jSens2Resp
+    dTp <- (1-theta)*(1-c3)*nu3*T3 -(nuD+nup)*Tp  -kSens2Res*Tp -muo*Tp +jSens2Resp
     
     dTr <- prec*c1*nu1*T1 +prec*c2*nu2*T2 +prec*c3*nu3*T3 +prec*nuD*Tp -rho*Tr -kRes2Sens*Tr -muo*Tr
-    dIC1 <- ps*lam*S +pr*lam*R +theta*(1-c3)*nu3*T3 +rho*Tr -treat*IC1 -nuC*IC1 -sensC*fw*IC1 -kRes2Sens*IC1 -muo*IC1
-    dIA1 <- lam*(1-ps)*S +lam*(1-pr)*R +(1-prec)*nuD*Tp +nuC*IC1 -nuA*IA1 -sensA*fw*IA1 -kRes2Sens*IA1 -muo*IA1
-    dIU1 <- nuA*IA1 -nuU*IU1 -sensU*fw*IU1 -kRes2Sens*IU1 -muo*IU1
+    dIC1 <- ps*lam*S +pr*lam*R +theta*(1-c3)*nu3*T3 +rho*Tr -treat*IC1 -nuC*IC1 -kRes2Sens*IC1 -muo*IC1
+    dIA1 <- lam*(1-ps)*S +lam*(1-pr)*R +(1-prec)*nuD*Tp +nuC*IC1 -nuA*IA1 -kRes2Sens*IA1 -muo*IA1
+    dIU1 <- nuA*IA1 -nuU*IU1 -kRes2Sens*IU1 -muo*IU1
     
     dP <- (1-prec)*c1*nu1*T1 +(1-prec)*c2*nu2*T2 +(1-prec)*c3*nu3*T3 +nup*Tp -nuD*P -muo*P +jSens2ResP
     dR <- nuU*IU1 +nuD*P -omega*R -lam*R +kRes2Sens*(IC1+IA1+IU1+Tr)+(((nuD[1]/(365+nuD[1]))*kRes2Sens*T1)+((2*nuD[1]/(365+2*nuD[1]))*kRes2Sens*T2)+((3*nuD[1]/(365+3*nuD[1]))*kRes2Sens*T3)) +kSens2Res*Tp + ( (365/(365+nuD[1]))*kSens2Res*T1 + (365/(365+2*nuD[1]))*kSens2Res*T2 + (365/(365+3*nuD[1]))*kSens2Res*T3) -muo*R +jSens2ResR*R
     
     dCumInc <- treat*IC1
 
-    dFail <- fw*Tp+sensC*fw*IC1+sensA*fw*IA1+sensU*fw*IU1
-    dpositiveDay3up <-T3+Tp
-    dpositiveDay1up <-T1+T2+T3+Tp
-    dCumIC1 <- ps*lam*S +pr*lam*R +theta*(1-c3)*nu3*T3 +rho*Tr
-    dCliFail <- theta*(1-c3)*nu3*T3 +rho*Tr
+    dFail <- fw * Tp + sensC * fw * IC1 + sensA * fw * IA1 + sensU * fw * IU1
+    dpositiveDay3up <- T3 + Tp
+    dpositiveDay1up <-T1 + T2 + T3 + Tp
+    dCumIC1 <- ps * lam * S + pr * lam * R + theta * (1 - c3) * nu3 * T3 + rho * Tr
+    dCliFail <- theta * (1 - c3) * nu3 * T3 + rho * Tr
     
     ## end  ------ rate of change fo the system
 
@@ -342,6 +342,13 @@ clinc <- rep(0,(nq+1))
 clincres <- rep(0,(nq+1))
 cliFail <- rep(0,(nq+1))
 ##-------- loop over dose values --------------------------------------------------------------------------------------------------##
+plotS1 <- FALSE
+pdf(
+  ifelse(plotS1, "figs/S1_Fig.pdf", "figs/S2_Fig.pdf"),
+  width = 6.27, height = 10.2
+)
+par(mfrow = c(6, 4))
+par(mar=c(2.1, 2.1, 3.1, 1.1), oma = c(2, 2, 0, 0))
 for (i in 1:(nq+1)){
   qq[i] <- (i - 1) / nq
   dose.vec[i] <- qq[i] * parameters$Ds                                  
@@ -403,6 +410,27 @@ for (i in 1:(nq+1)){
   totprev <- rowSums(prev)
   prevr <- prev[,2]-prev[,1]*prev[,2]/100
   presprev <- 100*prev[,2]/totprev
+
+  if ((i - 1) %% 5 == 0) {
+    if (plotS1) {
+      plot(
+        t, totprev,
+        type = "l", col = "black", lwd = 2, xlim = c(0, maxt),
+        main = "", xlab = "", ylab = ""
+      )
+      lines(t,prev[,2],col="red")
+      if ((i - 1) %in% seq(0, 100, 20)) mtext("% prevalence", 2, 3)
+    } else {
+      plot(t,presprev,type="l",col="red",lwd=2,ylim=c(0,100),xlim=c(0,maxt),
+           xlab="",ylab="")
+      abline(h = 50, col = "grey") 
+      if ((i - 1) %in% seq(0, 100, 20)) mtext("% resistant", 2, 3)
+    }
+    mtext(paste0(100 * qq[i], " % API"), 3, 0, font = 2)
+    if ((i - 1) %in% seq(85, 100, 5)) mtext("time (years)", 1, 3)
+  }
+  
+  
   
   ## plot 4 plots for each dose level: 1) incidence of total and resistance (cases per 1000 per month), 2) prevalence of total and resistance (%),  
   ## 3) incidence of resistance (%), 4) prevalence of resistance (%) 
@@ -428,6 +456,23 @@ for (i in 1:(nq+1)){
        xlab="time (years)",ylab="% resistant")
   lines(50*pop[,1]/parameters$N,type="l",col="grey")
   dev.off()
+
+  pdf(
+    paste0("figs/temporal_dynamics_dose_prevonly_", qq[i], ".pdf"),
+    width = 6.2, height = 4.3, pointsize = 10
+  )
+  par(mfrow=c(2, 1))
+  par(mar=c(4.1,4.1,4.1,1.1))
+  plot(t,totprev,type="l",col="black",lwd=2,xlim=c(0,maxt),
+       main="Prevalence",xlab="time (years)",ylab="% prevalence")
+  lines(t,prev[,2],col="red")
+  plot(t,presprev,type="l",col="red",lwd=2,ylim=c(0,100),xlim=c(0,maxt),
+       xlab="time (years)",ylab="% resistant")
+  # lines(50*pop[,1]/parameters$N,type="l",col="grey")
+  abline(h = 50, col = "grey")
+  dev.off()
+  print(t[which(presprev > 50)[1]])
+  
   ## save key output (cumulative incidence)
   cinc[i]<-sum(CumInc[length(CumInc[,2]),])-(prod(CumInc[length(CumInc[,2]),]))/((maxt-parameters$t_treat)*1000)
   cincres[i]<-CumInc[length(CumInc[,2]),2]
@@ -436,16 +481,63 @@ for (i in 1:(nq+1)){
   cliFail[i]<-sum(CliFail[length(CliFail[,2]),])-(prod(CliFail[length(CliFail[,2]),]))/((maxt-parameters$t_treat)*1000)
 }
 ##----- end loop ---------------------------------------------------------------------------------------------------------##
+dev.off()
 
-
-write.csv(cinc, file = "tt_cincR02_25AWT0_5_gammaa1_gammap1.csv")
-write.csv(cincres, file = "tt_cincresR02_25AWT0_5_gammaa1_gammap1.csv")
-write.csv(clinc, file = "tt_clincR02_25AWT0_5_gammaa1_gammap1.csv")
-write.csv(clincres, file = "tt_clincresR02_25AWT0_5_gammaa1_gammap1.csv")
-write.csv(cliFail, file = "tt_cliFailR02_25AWT0_5_gammaa1_gammap1.csv")
+write.csv(
+  cinc,
+  file = paste0(
+    "tt_cinc_R0_", parameters$R0[1],
+    "_AWT_", parameters$wait_treat,
+    "_gammaa_", parameters$gammaa,
+    "_gammap_", parameters$gammap,
+    ".csv"
+  )
+)
+write.csv(
+  cincres,
+  file = paste0(
+    "tt_cincresR0_", parameters$R0[1],
+    "_AWT_", parameters$wait_treat,
+    "_gammaa_", parameters$gammaa,
+    "_gammap_", parameters$gammap,
+    ".csv"
+  )
+)
+write.csv(
+  clinc,
+  file = paste0(
+    "tt_clinc_R0_", parameters$R0[1],
+    "_AWT_", parameters$wait_treat,
+    "_gammaa_", parameters$gammaa,
+    "_gammap_", parameters$gammap,
+    ".csv"
+  )
+)
+write.csv(
+  clincres,
+  file = paste0(
+    "tt_clincres_R0_", parameters$R0[1],
+    "_AWT_", parameters$wait_treat,
+    "_gammaa_", parameters$gammaa,
+    "_gammap_", parameters$gammap,
+    ".csv"
+  )
+)
+write.csv(
+  cliFail,
+  file = paste0(
+    "tt_cliFail_R0_", parameters$R0[1],
+    "_AWT_", parameters$wait_treat,
+    "_gammaa_", parameters$gammaa,
+    "_gammap_", parameters$gammap,
+    ".csv"
+  )
+)
 
 
 ############################  END  ##########################################################################################
+
+## NOTE TO LISA: I have not really changed the model - just the plotting
 
 
 ## Plot cumulative incidence vs dose
@@ -475,7 +567,8 @@ legend(
   lwd = 2
 )
 dev.off()
-
+print(qq[which.max(cincres)])
+print(qq[which(cincres > 100)])
 
 parnames <- c(
   "S", "T1", "T2", "T3", "Tp", "Tr", "IC1", "IA1", "IU1", "P", "R",
