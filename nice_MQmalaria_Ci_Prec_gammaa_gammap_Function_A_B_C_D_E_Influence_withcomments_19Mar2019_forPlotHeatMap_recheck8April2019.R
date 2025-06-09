@@ -161,7 +161,7 @@ MedQual<-function(t, X, parameters) {
     lam <- beta*seas*(IC1+kA*(IA1+T1+T2+T3+Tp)+kU*(IU1+Tr))/N   # force of infection 
     nuD <- nuDmin / (dose / parameters$Ds + 0.01 / 365)                # clearance rate on treatment day 4+ 
     # print(nuD)
-    nup <- (dose/parameters$Ds)*nupmax            # clearance rate on treatment day 4+ (partner-drug) - SHOULDN'T THIS TAKE A SIMILAR FORM to nuD?
+    nup <- (dose/parameters$Ds)*nupmax            # clearance rate on treatment day 4+ (partner-drug) - SHOULDN'T THIS TAKE A SIMILAR FORM to nuD?
     # print(nup)
     theta <- 1/(1+(3/365)*nuC)                                    # ?
     treat <- (t>=t_treat)*365/(wait_treat)                      # rate of starting treatment, once passed t_treat
