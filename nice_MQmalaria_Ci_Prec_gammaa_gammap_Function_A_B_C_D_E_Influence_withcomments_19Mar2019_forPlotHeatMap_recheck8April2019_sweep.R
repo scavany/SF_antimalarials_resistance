@@ -77,7 +77,9 @@ parameters <- list(
   jSens2ResP=rep(0,A),         # relative novel mutation occurs due to remaining drug in Pf-, drug+ stage
   jSens2ResR=rep(0,A),         # relative novel mutation occurs during immune (uninfected) stage ??????
   jSens2ResS=rep(0,A),         # relative novel mutation occurs during susceptible (uninfected) stage ??????
-  lam=rep(0, A)                # ?                
+  lam=rep(0, A),               # ?
+  gammaa = 0.25,               # degree of artemisinin resistance
+  gammap = 0.25                # degree of partner-drug resistance
 )
 ###---------------------------------------------------END-----parameters <- list( ---------------------------------------------------------###
 parameters             #with A=2
@@ -164,7 +166,7 @@ MedQual<-function(t, X, parameters) {
     # print(nuD)
     nup <- (dose/parameters$Ds)*nupmax            # clearance rate of parasites on treatment day 4+ (partner-drug) 
     # print(nup)
-    theta <- 1/(1+(3/365)*nuC)                                    # rate of return to infected
+    theta <- 1/(1+(3/365)*nuC)                                    # ?
     treat <- (t>=t_treat)*365/(wait_treat)                      # rate of starting treatment, once passed t_treat
     tf <- 7/365                                                   # 7 days after treatment
     rf <- 52                                                    # weekly follow up
@@ -213,8 +215,8 @@ MedQual<-function(t, X, parameters) {
     ## lp0<-  2                   # initial log10 parasite load in whole body
     
     ## ## here we assume that degree of resistance to artemisin is gammaa then
-    gammaa <- 0.75           # degree of resitance to artmeisin (currently at about 0.3)
-    gammap <- 0.75           # degree of resistance to parter drug
+    # gammaa <- 0.75           # degree of resitance to artmeisin (currently at about 0.3)
+    # gammap <- 0.75           # degree of resistance to parter drug
     ## mlamax<-3                  # sensitive rate of reduction of parasites in the body by artemisinin
     ## mlpmax<-1                  # sensitive rate of reduction of parasites in the body by the partner
     
@@ -334,27 +336,25 @@ MedQual<-function(t, X, parameters) {
 
 
 ## run and plot for a range of dose 
-nq <- 100
+nq <- 20
 qq <- rep(0,(nq+1))
+wait_treat.vec <- c(parameters$wait_treat, seq(0, 7, length.out = nq + 1)[-1])
 dose.vec <- rep(0,(nq+1))
-cinc <- rep(0,(nq+1))
-cincres <- rep(0,(nq+1))
-clinc <- rep(0,(nq+1))
-clincres <- rep(0,(nq+1))
-cliFail <- rep(0,(nq+1))
+cinc <- matrix(rep(0,(nq + 1)^2), nq + 1, nq + 1)
+cincres <- matrix(rep(0,(nq + 1)^2), nq + 1, nq + 1)
+clinc <- matrix(rep(0,(nq + 1)^2), nq + 1, nq + 1)
+clincres <- matrix(rep(0,(nq + 1)^2), nq + 1, nq + 1)
+cliFail <- matrix(rep(0,(nq + 1)^2), nq + 1, nq + 1)
 ##-------- loop over dose values --------------------------------------------------------------------------------------------------##
-plotS1 <- TRUE
-pdf(
-  ifelse(plotS1, "figs/S1_Fig.pdf", "figs/S2_Fig.pdf"),
-  width = 6.27, height = 10.2
-)
-par(mfrow = c(6, 4))
-par(mar=c(2.1, 2.1, 3.1, 1.1), oma = c(2, 2, 0, 0))
-for (i in 1:(nq+1)){
+for (ii in 1:(nq+1)^2){
+  print(ii)
+  i <- 1 + ((ii - 1) %% (nq + 1))
+  j <- 1 + ((ii - 1) %/% (nq + 1))
   qq[i] <- (i - 1) / nq
   dose.vec[i] <- qq[i] * parameters$Ds                                  
   # parameters["dose"]<-qq[i]
-  parameters$dose <- qq[i] * parameters$Ds                                  
+  parameters$dose <- qq[i] * parameters$Ds
+  parameters$wait_treat <- wait_treat.vec[j]
   # ptm <- proc.time()         # Start the clock!
   # run the model
   out <- ode(y = X, times = times, func = MedQual, parms = parameters, method="vode", maxsteps = 5000)   # run the model
@@ -411,85 +411,22 @@ for (i in 1:(nq+1)){
   totprev <- rowSums(prev)
   prevr <- prev[,2]-prev[,1]*prev[,2]/100
   presprev <- 100*prev[,2]/totprev
-
-  if ((i - 1) %% 5 == 0) {
-    if (plotS1) {
-      plot(
-        t, totprev,
-        type = "l", col = "black", lwd = 2, xlim = c(0, maxt),
-        main = "", xlab = "", ylab = ""
-      )
-      lines(t,prev[,2],col="red")
-      if ((i - 1) %in% seq(0, 100, 20)) mtext("% prevalence", 2, 3)
-    } else {
-      plot(t,presprev,type="l",col="red",lwd=2,ylim=c(0,100),xlim=c(0,maxt),
-           xlab="",ylab="")
-      abline(h = 50, col = "grey") 
-      if ((i - 1) %in% seq(0, 100, 20)) mtext("% resistant", 2, 3)
-    }
-    mtext(paste0(100 * qq[i], " % API"), 3, 0, font = 2)
-    if ((i - 1) %in% seq(85, 100, 5)) mtext("time (years)", 1, 3)
-  }
-  
-  
   
   ## plot 4 plots for each dose level: 1) incidence of total and resistance (cases per 1000 per month), 2) prevalence of total and resistance (%),  
-  ## 3) incidence of resistance (%), 4) prevalence of resistance (%) 
-  pdf(
-    paste0("figs/temporal_dynamics_dose_", qq[i], ".pdf"),
-    width = 6.2, height = 4.3, pointsize = 10
-  )
-  par(mfrow=c(2,2))
-  par(mar=c(4.1,4.1,4.1,1.1))
-  plot(t,totinc_month,type="l",col="black",lwd=2,xlim=c(0,maxt),
-       main="Incidence",xlab="time (years)",ylab="cases per 1000 per month")
-  lines(t,inc_month[,2],col="red")
-  
-  plot(t,totprev,type="l",col="black",lwd=2,xlim=c(0,maxt),
-       main="Prevalence",xlab="time (years)",ylab="% prevalence")
-  lines(t,prev[,2],col="red")
-  # par(mar=c(4.1,4.1,1.1,1.1))
-  plot(t,presinc_month,type="l",col="red",lwd=2,ylim=c(0,100),xlim=c(0,maxt),
-       xlab="time (years)",ylab="% resistant")
-  lines(50*pop[,1]/parameters$N,type="l",col="grey")
-  
-  plot(t,presprev,type="l",col="red",lwd=2,ylim=c(0,100),xlim=c(0,maxt),
-       xlab="time (years)",ylab="% resistant")
-  lines(50*pop[,1]/parameters$N,type="l",col="grey")
-  dev.off()
-
-  pdf(
-    paste0("figs/temporal_dynamics_dose_prevonly_", qq[i], ".pdf"),
-    width = 6.2, height = 4.3, pointsize = 10
-  )
-  par(mfrow=c(2, 1))
-  par(mar=c(4.1,4.1,4.1,1.1))
-  plot(t,totprev,type="l",col="black",lwd=2,xlim=c(0,maxt),
-       main="Prevalence",xlab="time (years)",ylab="% prevalence")
-  lines(t,prev[,2],col="red")
-  abline(v = 5, lty = 2, lwd = 1.5)
-  plot(t,presprev,type="l",col="red",lwd=2,ylim=c(0,100),xlim=c(0,maxt),
-       xlab="time (years)",ylab="% resistant")
-  # lines(50*pop[,1]/parameters$N,type="l",col="grey")
-  abline(h = 50, col = "grey")
-  dev.off()
-  print(t[which(presprev > 50)[1]])
-  
+  ## 3) incidence of resistance (%), 4) prevalence of resistance (%)   
   ## save key output (cumulative incidence)
-  cinc[i]<-sum(CumInc[length(CumInc[,2]),])-(prod(CumInc[length(CumInc[,2]),]))/((maxt-parameters$t_treat)*1000)
-  cincres[i]<-CumInc[length(CumInc[,2]),2]
-  clinc[i]<-sum(CumIC1[length(CumIC1[,2]),])-(prod(CumIC1[length(CumIC1[,2]),]))/((maxt-parameters$t_treat)*1000)
-  clincres[i]<-CumIC1[length(CumIC1[,2]),2]
-  cliFail[i]<-sum(CliFail[length(CliFail[,2]),])-(prod(CliFail[length(CliFail[,2]),]))/((maxt-parameters$t_treat)*1000)
+  cinc[i, j]<-sum(CumInc[length(CumInc[,2]),])-(prod(CumInc[length(CumInc[,2]),]))/((maxt-parameters$t_treat)*1000)
+  cincres[i, j]<-CumInc[length(CumInc[,2]),2]
+  clinc[i, j]<-sum(CumIC1[length(CumIC1[,2]),])-(prod(CumIC1[length(CumIC1[,2]),]))/((maxt-parameters$t_treat)*1000)
+  clincres[i, j]<-CumIC1[length(CumIC1[,2]),2]
+  cliFail[i, j]<-sum(CliFail[length(CliFail[,2]),])-(prod(CliFail[length(CliFail[,2]),]))/((maxt-parameters$t_treat)*1000)
 }
 ##----- end loop ---------------------------------------------------------------------------------------------------------##
-dev.off()
 
 write.csv(
   cinc,
   file = paste0(
     "tt_cinc_R0_", parameters$R0[1],
-    "_AWT_", parameters$wait_treat,
     "_gammaa_", parameters$gammaa,
     "_gammap_", parameters$gammap,
     ".csv"
@@ -499,7 +436,6 @@ write.csv(
   cincres,
   file = paste0(
     "tt_cincresR0_", parameters$R0[1],
-    "_AWT_", parameters$wait_treat,
     "_gammaa_", parameters$gammaa,
     "_gammap_", parameters$gammap,
     ".csv"
@@ -509,7 +445,6 @@ write.csv(
   clinc,
   file = paste0(
     "tt_clinc_R0_", parameters$R0[1],
-    "_AWT_", parameters$wait_treat,
     "_gammaa_", parameters$gammaa,
     "_gammap_", parameters$gammap,
     ".csv"
@@ -519,7 +454,6 @@ write.csv(
   clincres,
   file = paste0(
     "tt_clincres_R0_", parameters$R0[1],
-    "_AWT_", parameters$wait_treat,
     "_gammaa_", parameters$gammaa,
     "_gammap_", parameters$gammap,
     ".csv"
@@ -529,7 +463,6 @@ write.csv(
   cliFail,
   file = paste0(
     "tt_cliFail_R0_", parameters$R0[1],
-    "_AWT_", parameters$wait_treat,
     "_gammaa_", parameters$gammaa,
     "_gammap_", parameters$gammap,
     ".csv"
@@ -543,39 +476,39 @@ write.csv(
 
 
 ## Plot cumulative incidence vs dose
-pdf(
-  paste0("figs/cumulative_inc_by_dose_Tx_delay_", parameters$wait_treat, ".pdf"),
-  width = 3, height = 2, pointsize = 10
-)
-par(mar=c(4.1,5.1,1.1,1.1))
-plot(
-  qq, cinc - cincres,
-  type = "l",
-  lwd = 2, col = "black",
-  xlab = "% active ingredient",
-  ylab = "Cumulative\nincidence",
-  ylim = c(0, max(cinc))
-)
-lines(
-  qq, cincres,
-  lwd = 2, col = "red", lty = 2
-)
-legend(
-  "topright",
-  bty = "n",
-  legend = c("Sensitive", "Resistant"),
-  col = c("black", "red"),
-  lty = c(1,2),
-  lwd = 2
-)
-dev.off()
-print(qq[which.max(cincres)])
-print(qq[which(cincres > 100)])
+# pdf(
+#   paste0("figs/cumulative_inc_by_dose_Tx_delay_", parameters$wait_treat, ".pdf"),
+#   width = 3, height = 2, pointsize = 10
+# )
+# par(mar=c(4.1,5.1,1.1,1.1))
+# plot(
+#   qq, cinc - cincres,
+#   type = "l",
+#   lwd = 2, col = "black",
+#   xlab = "% active ingredient",
+#   ylab = "Cumulative\nincidence",
+#   ylim = c(0, max(cinc))
+# )
+# lines(
+#   qq, cincres,
+#   lwd = 2, col = "red", lty = 2
+# )
+# legend(
+#   "topright",
+#   bty = "n",
+#   legend = c("Sensitive", "Resistant"),
+#   col = c("black", "red"),
+#   lty = c(1,2),
+#   lwd = 2
+# )
+# dev.off()
+# print(qq[which.max(cincres)])
+# print(qq[which(cincres > 100)])
 
-parnames <- c(
-  "S", "T1", "T2", "T3", "Tp", "Tr", "IC1", "IA1", "IU1", "P", "R",
-  "CumInc", "Fail", "positiveDay3up", "positiveDay1up", "CumIC1", "CliFail"
-)
+# parnames <- c(
+#   "S", "T1", "T2", "T3", "Tp", "Tr", "IC1", "IA1", "IU1", "P", "R",
+#   "CumInc", "Fail", "positiveDay3up", "positiveDay1up", "CumIC1", "CliFail"
+# )
 
 ## pdf("test.pdf", width = 4, height = 34)
 ## par(mfrow = c(length(parnames),2))
