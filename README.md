@@ -24,7 +24,7 @@ Scripts can be opened and run in R or RStudio after installing their required pa
 
 Meeyai A, Cavany S, Newton PN, White L. *Modelling the impact of poor-quality antimalarials on Plasmodium falciparum resistance dynamics*.
 
-For a fixed, citable version of this code, use the Zenodo DOI associated with the relevant GitHub release: **[add Zenodo DOI after archiving]**.
+The code associated with the accepted manuscript (version v1.0) is permanently archived on Zenodo: [![DOI](https://zenodo.org/badge/870157979.svg)](https://doi.org/10.5281/zenodo.23666835).
 
 ## Licence
 
